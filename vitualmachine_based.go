@@ -23,13 +23,22 @@ const (
 	Match Opcode = 4
 )
 
-func is_quantifier(ch rune) bool {
-	if ch == '+' || ch == '*' || ch == '?' {
-		return true
-	}
-	return false
+type Regex struct {
+	instructions []Inst
+	group_number int
 }
-func main() {
+
+func (re *Regex) Match(input string) ([]int, bool) {
+
+	saved := make([]int, (re.group_number)*2)
+
+	matched := Execute(re.instructions, input, 0, 0, saved)
+
+	return saved, matched
+
+}
+
+func NewRegex(input_regex string) Regex {
 
 	operators := []shunting.Operator{}
 	operators = append(operators, shunting.Operator{Value: '|', Precedence: 0, IsLeftAssociative: true})
@@ -40,29 +49,30 @@ func main() {
 
 	i2p := shunting.NewIn2Post(operators, true)
 
-	input_regex := "a+(b+)"
-
 	preprocessed := Preprocess(input_regex)
 	fmt.Printf("%s\n", preprocessed)
 
 	postfix := i2p.Parse(preprocessed)
-	postfix = []byte(postfix)
 	fmt.Printf("%s\n", postfix)
-	insts := compileToBytecode(postfix)
 
-	for i, ins := range insts {
-		fmt.Printf("%d: %+v\n", i, ins)
-	}
+	postfix = []byte(postfix)
+	insts, paren_count := compileToBytecode(postfix)
 
-	saved := make([]int, 100)
+	regex := Regex{instructions: insts, group_number: paren_count}
 
-	if Execute(insts, "aabbbbbb", 0, 0, saved) {
-		fmt.Printf("matched")
-		fmt.Printf("%v", saved)
+	return regex
+
+}
+
+func main() {
+
+	regex := NewRegex("a+|[0-9]+")
+	match, ifmatch := regex.Match("0034")
+	if ifmatch {
+		fmt.Printf("%v", match)
 	} else {
-		fmt.Printf("not matched")
+		fmt.Printf("not match")
 	}
-
 }
 
 func Execute(instructions []Inst, input string, pc, sp int, saved []int) bool {
@@ -111,6 +121,7 @@ func Execute(instructions []Inst, input string, pc, sp int, saved []int) bool {
 				}
 
 				saved[instructions[pc].save_id] = old
+				return false
 
 			}
 		}
@@ -139,10 +150,11 @@ func (s *InstStack) empty() bool {
 	return true
 }
 
-func compileToBytecode(postfix []byte) []Inst {
+func compileToBytecode(postfix []byte) ([]Inst, int) {
 
 	inst_stack := InstStack{}
-	paren_counter := 2
+	paren_counter := 0
+	group_number := 0
 
 	for _, regex_ch := range postfix {
 		switch regex_ch {
@@ -203,6 +215,7 @@ func compileToBytecode(postfix []byte) []Inst {
 			}
 		case '(':
 			{
+				group_number++
 				if !inst_stack.empty() {
 					prev_inst := inst_stack.pop()
 					new_inst := append(prev_inst, Inst{opcode: Save, save_id: paren_counter})
@@ -210,13 +223,16 @@ func compileToBytecode(postfix []byte) []Inst {
 				} else {
 					inst_stack.push([]Inst{Inst{opcode: Save, save_id: paren_counter}})
 				}
+
+				paren_counter += 2
 			}
 		case ')':
 			{
+				paren_counter -= 2
 				prev_inst := inst_stack.pop()
 				new_inst := append(prev_inst, Inst{opcode: Save, save_id: paren_counter + 1})
 				inst_stack.push(new_inst)
-				paren_counter++
+
 			}
 
 		default:
@@ -232,5 +248,5 @@ func compileToBytecode(postfix []byte) []Inst {
 	match := Inst{opcode: Match}
 	instructios = append(instructios, match)
 
-	return instructios
+	return instructios, group_number
 }
