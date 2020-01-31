@@ -23,20 +23,29 @@ const (
 	Match Opcode = 4
 )
 
+func is_quantifier(ch rune) bool {
+	if ch == '+' || ch == '*' || ch == '?' {
+		return true
+	}
+	return false
+}
 func main() {
 
 	operators := []shunting.Operator{}
 	operators = append(operators, shunting.Operator{Value: '|', Precedence: 0, IsLeftAssociative: true})
-	operators = append(operators, shunting.Operator{Value: '.', Precedence: 1, IsLeftAssociative: true})
+	operators = append(operators, shunting.Operator{Value: ',', Precedence: 1, IsLeftAssociative: true})
 	operators = append(operators, shunting.Operator{Value: '+', Precedence: 2, IsLeftAssociative: true})
 	operators = append(operators, shunting.Operator{Value: '*', Precedence: 2, IsLeftAssociative: true})
 	operators = append(operators, shunting.Operator{Value: '?', Precedence: 2, IsLeftAssociative: true})
 
 	i2p := shunting.NewIn2Post(operators, true)
 
-	input_regex := "a+.(b+)"
+	input_regex := "a+(b+)"
 
-	postfix := i2p.Parse(input_regex)
+	preprocessed := Preprocess(input_regex)
+	fmt.Printf("%s\n", preprocessed)
+
+	postfix := i2p.Parse(preprocessed)
 	postfix = []byte(postfix)
 	fmt.Printf("%s\n", postfix)
 	insts := compileToBytecode(postfix)
@@ -138,7 +147,7 @@ func compileToBytecode(postfix []byte) []Inst {
 	for _, regex_ch := range postfix {
 		switch regex_ch {
 
-		case '.':
+		case ',':
 			{
 				prev_inst := inst_stack.pop()
 				prev_inst2 := inst_stack.pop()
