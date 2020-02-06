@@ -1,4 +1,4 @@
-package main
+package regex
 
 import (
 	"strings"
@@ -48,6 +48,31 @@ func Expand_character_classes(input string) string {
 
 }
 
+func expand_shorthand_character(input string) string {
+	output := ""
+
+	for len(input) > 0 {
+		if input[0] == '\\' {
+			input = input[1:]
+			if input[0] == 'd' {
+				output = output + "[0-9]"
+			} else if input[0] == 'w' {
+				output = output + "[A-Za-z0-9_]"
+			} else {
+				output = output + "\\" + string(input[0])
+
+			}
+
+			input = input[1:]
+		} else {
+			output = output + string(input[0])
+			input = input[1:]
+		}
+	}
+	return output
+
+}
+
 func add_concat_regex(input string) string {
 
 	output := ""
@@ -72,7 +97,8 @@ func add_concat_regex(input string) string {
 }
 
 func Preprocess(input string) string {
-	output := Expand_character_classes(input)
+	output := expand_shorthand_character(input)
+	output = Expand_character_classes(output)
 	output = add_concat_regex(output)
 	output = "(" + output + ")"
 

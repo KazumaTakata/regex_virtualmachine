@@ -1,7 +1,7 @@
-package main
+package regex
 
 import (
-	"fmt"
+	//	"fmt"
 	"github.com/KazumaTakata/shunting-yard"
 )
 
@@ -49,11 +49,14 @@ func NewRegex(input_regex string) Regex {
 
 	i2p := shunting.NewIn2Post(operators, true)
 
+	//	fmt.Printf("%s\n", input_regex)
+
 	preprocessed := Preprocess(input_regex)
-	fmt.Printf("%s\n", preprocessed)
+
+	//	fmt.Printf("%s\n", preprocessed)
 
 	postfix := i2p.Parse(preprocessed)
-	fmt.Printf("%s\n", postfix)
+	//	fmt.Printf("%s\n", postfix)
 
 	postfix = []byte(postfix)
 	insts, paren_count := compileToBytecode(postfix)
@@ -62,17 +65,6 @@ func NewRegex(input_regex string) Regex {
 
 	return regex
 
-}
-
-func main() {
-
-	regex := NewRegex("a+|[0-9]+")
-	match, ifmatch := regex.Match("0034")
-	if ifmatch {
-		fmt.Printf("%v", match)
-	} else {
-		fmt.Printf("not match")
-	}
 }
 
 func Execute(instructions []Inst, input string, pc, sp int, saved []int) bool {
@@ -156,7 +148,8 @@ func compileToBytecode(postfix []byte) ([]Inst, int) {
 	paren_counter := 0
 	group_number := 0
 
-	for _, regex_ch := range postfix {
+	for i := 0; i < len(postfix); i++ {
+		regex_ch := postfix[i]
 		switch regex_ch {
 
 		case ',':
@@ -234,9 +227,12 @@ func compileToBytecode(postfix []byte) ([]Inst, int) {
 				inst_stack.push(new_inst)
 
 			}
-
 		default:
 			{
+				if regex_ch == '\\' {
+					i++
+					regex_ch = postfix[i]
+				}
 				inst := Inst{opcode: Char, char: regex_ch}
 				inst_stack.push([]Inst{inst})
 			}
