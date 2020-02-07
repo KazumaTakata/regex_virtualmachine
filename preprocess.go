@@ -73,17 +73,50 @@ func expand_shorthand_character(input string) string {
 
 }
 
+func if_prevrune_need_concat(prev_rune rune) bool {
+	if prev_rune == ']' || unicode.IsNumber(prev_rune) || unicode.IsLetter(prev_rune) || is_quantifier(prev_rune) || prev_rune == ')' || prev_rune == '=' {
+		return true
+	}
+
+	return false
+
+}
+
 func add_concat_regex(input string) string {
 
 	output := ""
 	var prev_rune rune
+	if_skip := false
 	for i, cur_rune := range input {
+
+		if cur_rune == '[' {
+			if_skip = true
+			if if_prevrune_need_concat(prev_rune) {
+				output = output + string(',')
+			}
+		}
+
+		if cur_rune == ']' {
+			if_skip = false
+			output = output + string(cur_rune)
+			prev_rune = cur_rune
+			continue
+
+		}
+
+		if if_skip {
+			output = output + string(cur_rune)
+			prev_rune = cur_rune
+			continue
+		}
+
 		if i == 0 {
 			prev_rune = cur_rune
 			output = output + string(cur_rune)
 			continue
 		}
-		if unicode.IsNumber(prev_rune) || unicode.IsLetter(prev_rune) || is_quantifier(prev_rune) || prev_rune == ')' || prev_rune == '=' {
+
+		if if_prevrune_need_concat(prev_rune) {
 			if !is_quantifier(cur_rune) && cur_rune != rune('|') && cur_rune != rune(')') {
 				output = output + string(',')
 			}
@@ -98,7 +131,7 @@ func add_concat_regex(input string) string {
 
 func Preprocess(input string) string {
 	output := expand_shorthand_character(input)
-	output = Expand_character_classes(output)
+	//output = Expand_character_classes(output)
 	output = add_concat_regex(output)
 	output = "(" + output + ")"
 

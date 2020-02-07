@@ -112,7 +112,7 @@ func TestAlternation(t *testing.T) {
 
 	regex_input := "(set)|(\\d+)|([a-zA-Z_]\\w+)"
 
-	input := "aa1"
+	input := "21"
 
 	regex := NewRegex(regex_input)
 	match, ifmatch := regex.Match(input)

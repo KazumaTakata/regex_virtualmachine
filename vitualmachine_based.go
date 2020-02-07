@@ -6,26 +6,34 @@ import (
 )
 
 type Inst struct {
-	opcode  Opcode
-	char    byte
-	jump1   int
-	jump2   int
-	save_id int
+	opcode     Opcode
+	char       byte
+	jump1      int
+	jump2      int
+	save_id    int
+	char_class []char_class_range
+}
+
+type char_class_range struct {
+	begin byte
+	end   byte
 }
 
 type Opcode int
 
 const (
-	Char  Opcode = 0
-	Jmp   Opcode = 1
-	Split Opcode = 2
-	Save  Opcode = 3
-	Match Opcode = 4
+	Char      Opcode = 0
+	Jmp       Opcode = 1
+	Split     Opcode = 2
+	Save      Opcode = 3
+	Match     Opcode = 4
+	CharClass Opcode = 5
 )
 
 type Regex struct {
 	instructions []Inst
 	group_number int
+	actual_group []int
 }
 
 func (re *Regex) Match(input string) ([]int, bool) {
@@ -77,6 +85,29 @@ func Execute(instructions []Inst, input string, pc, sp int, saved []int) bool {
 					return false
 				}
 				if instructions[pc].char != input[sp] {
+					return false
+				}
+
+				pc++
+				sp++
+				continue
+
+			}
+		case CharClass:
+			{
+
+				if sp > len(input)-1 {
+					return false
+				}
+
+				matched := false
+				for _, class_range := range instructions[pc].char_class {
+					if class_range.begin <= input[sp] && input[sp] <= class_range.end {
+						matched = true
+					}
+				}
+
+				if !matched {
 					return false
 				}
 
@@ -219,6 +250,27 @@ func compileToBytecode(postfix []byte) ([]Inst, int) {
 				inst_stack.push([]Inst{Inst{opcode: Save, save_id: paren_counter}})
 				paren_stack = append(paren_stack, paren_counter)
 				paren_counter += 2
+			}
+		case '[':
+			{
+				i++
+				range_group := []char_class_range{}
+				for postfix[i] != ']' {
+					if postfix[i+1] != '-' {
+						char_range := char_class_range{begin: postfix[i], end: postfix[i]}
+						range_group = append(range_group, char_range)
+						i++
+					} else {
+						start := postfix[i]
+						end := postfix[i+2]
+						char_range := char_class_range{begin: start, end: end}
+						range_group = append(range_group, char_range)
+						i += 3
+					}
+				}
+				inst := Inst{opcode: CharClass, char_class: range_group}
+				inst_stack.push([]Inst{inst})
+
 			}
 		case ')':
 			{
