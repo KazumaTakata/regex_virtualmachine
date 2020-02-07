@@ -1,7 +1,7 @@
 package regex
 
 import (
-	//	"fmt"
+	"fmt"
 	"github.com/KazumaTakata/shunting-yard"
 )
 
@@ -49,18 +49,17 @@ func NewRegex(input_regex string) Regex {
 
 	i2p := shunting.NewIn2Post(operators, true)
 
-	//	fmt.Printf("%s\n", input_regex)
+	fmt.Printf("%s\n", input_regex)
 
 	preprocessed := Preprocess(input_regex)
 
-	//	fmt.Printf("%s\n", preprocessed)
+	fmt.Printf("%s\n", preprocessed)
 
 	postfix := i2p.Parse(preprocessed)
-	//	fmt.Printf("%s\n", postfix)
+	fmt.Printf("%s\n", postfix)
 
 	postfix = []byte(postfix)
 	insts, paren_count := compileToBytecode(postfix)
-
 	regex := Regex{instructions: insts, group_number: paren_count}
 
 	return regex
@@ -146,6 +145,7 @@ func compileToBytecode(postfix []byte) ([]Inst, int) {
 
 	inst_stack := InstStack{}
 	paren_counter := 0
+	paren_stack := []int{}
 	group_number := 0
 
 	for i := 0; i < len(postfix); i++ {
@@ -209,21 +209,26 @@ func compileToBytecode(postfix []byte) ([]Inst, int) {
 		case '(':
 			{
 				group_number++
-				if !inst_stack.empty() {
-					prev_inst := inst_stack.pop()
-					new_inst := append(prev_inst, Inst{opcode: Save, save_id: paren_counter})
-					inst_stack.push(new_inst)
-				} else {
-					inst_stack.push([]Inst{Inst{opcode: Save, save_id: paren_counter}})
-				}
-
+				/*if !inst_stack.empty() {*/
+				//prev_inst := inst_stack.pop()
+				//new_inst := append(prev_inst, Inst{opcode: Save, save_id: paren_counter})
+				//inst_stack.push(new_inst)
+				//} else {
+				//inst_stack.push([]Inst{Inst{opcode: Save, save_id: paren_counter}})
+				/*}*/
+				inst_stack.push([]Inst{Inst{opcode: Save, save_id: paren_counter}})
+				paren_stack = append(paren_stack, paren_counter)
 				paren_counter += 2
 			}
 		case ')':
 			{
-				paren_counter -= 2
+				paren_index := paren_stack[len(paren_stack)-1]
+				paren_stack = paren_stack[:len(paren_stack)-1]
+
 				prev_inst := inst_stack.pop()
-				new_inst := append(prev_inst, Inst{opcode: Save, save_id: paren_counter + 1})
+				prev_paren := inst_stack.pop()
+				new_inst := append(prev_inst, Inst{opcode: Save, save_id: paren_index + 1})
+				new_inst = append(prev_paren, new_inst...)
 				inst_stack.push(new_inst)
 
 			}

@@ -83,7 +83,7 @@ func add_concat_regex(input string) string {
 			output = output + string(cur_rune)
 			continue
 		}
-		if unicode.IsNumber(prev_rune) || unicode.IsLetter(prev_rune) || is_quantifier(prev_rune) || prev_rune == ')' {
+		if unicode.IsNumber(prev_rune) || unicode.IsLetter(prev_rune) || is_quantifier(prev_rune) || prev_rune == ')' || prev_rune == '=' {
 			if !is_quantifier(cur_rune) && cur_rune != rune('|') && cur_rune != rune(')') {
 				output = output + string(',')
 			}
