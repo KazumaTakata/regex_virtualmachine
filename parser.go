@@ -28,17 +28,23 @@ func (re *regex) gen() []Inst {
 			alternated = term.gen()
 			continue
 		}
-		code_length := len(term.gen())
-		code_length2 := len(alternated)
+		code_length := len(alternated)
+		code_length2 := len(term.gen())
 		inst := Inst{opcode: Split, jump1: 1, jump2: code_length + 2}
-		new_inst := append([]Inst{inst}, term.gen()...)
+		new_inst := append([]Inst{inst}, alternated...)
 		new_inst = append(new_inst, Inst{opcode: Jmp, jump1: code_length2 + 1})
-		new_inst = append(new_inst, alternated...)
+		new_inst = append(new_inst, term.gen()...)
 		alternated = new_inst
 	}
 
 	return alternated
 
+}
+
+func appendMatch(insts []Inst) []Inst {
+	match := Inst{opcode: Match}
+	insts = append(insts, match)
+	return insts
 }
 
 type Term struct {
@@ -73,6 +79,24 @@ type Factor struct {
 func (fa *Factor) gen() []Inst {
 
 	base := fa.base.gen()
+	if fa.repitition == QUESTION {
+
+		inst := Inst{opcode: Split, jump1: 1, jump2: len(base) + 1}
+		new_inst := append([]Inst{inst}, base...)
+		return new_inst
+
+	} else if fa.repitition == ASTERISK {
+
+		inst := Inst{opcode: Split, jump1: 1, jump2: len(base) + 2}
+		new_inst := append([]Inst{inst}, base...)
+		new_inst = append(new_inst, Inst{opcode: Jmp, jump1: -len(base) - 1})
+		return new_inst
+
+	} else if fa.repitition == PLUS {
+		inst := Inst{opcode: Split, jump1: -len(base), jump2: 1}
+		new_inst := append(base, inst)
+		return new_inst
+	}
 
 	return base
 
@@ -96,7 +120,8 @@ func (ba *Base) gen() []Inst {
 }
 
 type Regex_Input struct {
-	input string
+	input       string
+	paren_count int
 }
 
 func (re *Regex_Input) peek() byte {
@@ -163,6 +188,9 @@ func (re *Regex_Input) parse_Factor() *Factor {
 		} else {
 			factor.repitition = NONE
 		}
+	} else {
+		factor.repitition = NONE
+
 	}
 	return factor
 }
@@ -172,6 +200,7 @@ func (re *Regex_Input) parse_Base() *Base {
 	switch re.peek() {
 	case '(':
 		{
+			re.paren_count++
 			re.eat('(')
 			regex := re.parse_Regex()
 			re.eat(')')
@@ -199,14 +228,5 @@ func (re *Regex_Input) parse_Base() *Base {
 		}
 
 	}
-
-}
-
-func main() {
-
-	regex_input := Regex_Input{input: "aaa"}
-	regex := regex_input.parse_Regex()
-
-	fmt.Printf("%+v", regex)
 
 }
