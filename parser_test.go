@@ -7,17 +7,19 @@ import (
 
 func TestRegex(t *testing.T) {
 
-	regex_input := "(a(a*)b+)"
+	regex_input := "(a(?<number>a*)b+)"
 	input := "aaab"
 
 	regex := NewRegexWithParser(regex_input)
-	match, ifmatch := regex.Match(input)
+	match, ifmatch, named := regex.Match(input)
 
 	if !ifmatch {
 		t.Errorf("Regex not matched: regex:%s, input:%s", regex_input, input)
 	}
 
-	fmt.Printf("%+v", match)
+	fmt.Printf("%+v\n", match)
+
+	fmt.Printf("%+v\n", named["number"])
 
 }
 

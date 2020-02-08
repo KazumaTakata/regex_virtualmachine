@@ -13,6 +13,7 @@ const (
 
 var paren_counter = 0
 var paren_stack = paren_Stack{}
+var group_stack = group_Stack{}
 
 type paren_Stack struct {
 	data []int
@@ -29,6 +30,25 @@ func (s *paren_Stack) top() int {
 }
 
 func (s *paren_Stack) push(d int) {
+	s.data = append(s.data, d)
+
+}
+
+type group_Stack struct {
+	data []string
+}
+
+func (s *group_Stack) pop() string {
+	top := s.data[len(s.data)-1]
+	s.data = s.data[:len(s.data)-1]
+	return top
+}
+
+func (s *group_Stack) top() string {
+	return s.data[len(s.data)-1]
+}
+
+func (s *group_Stack) push(d string) {
 	s.data = append(s.data, d)
 
 }
@@ -128,20 +148,22 @@ type Base struct {
 	char       byte
 	if_escaped bool
 	regex      *regex
+	group_name string
 }
 
 func (ba *Base) gen() []Inst {
 
 	if ba.regex != nil {
 		//add save instruction
-
-		save_inst := Inst{opcode: Save, save_id: paren_counter}
+		save_inst := Inst{opcode: Save, save_id: paren_counter, save_group: ba.group_name}
 		paren_stack.push(paren_counter)
+		group_stack.push(ba.group_name)
 		paren_counter += 2
 
 		new_inst := append([]Inst{save_inst}, ba.regex.gen()...)
 		paren_id := paren_stack.pop()
-		save_inst = Inst{opcode: Save, save_id: paren_id + 1}
+		group_name := group_stack.pop()
+		save_inst = Inst{opcode: Save, save_id: paren_id + 1, save_group: group_name}
 		new_inst = append(new_inst, save_inst)
 
 		return new_inst
@@ -160,6 +182,10 @@ type Regex_Input struct {
 
 func (re *Regex_Input) peek() byte {
 	return re.input[0]
+}
+
+func (re *Regex_Input) peek2() byte {
+	return re.input[1]
 }
 
 func (re *Regex_Input) next() byte {
@@ -234,13 +260,40 @@ func (re *Regex_Input) parse_Base() *Base {
 	switch re.peek() {
 	case '(':
 		{
+			if re.peek2() == '?' {
+				re.eat('(')
+			}
+
 			re.paren_count++
 			re.eat('(')
-			regex := re.parse_Regex()
-			re.eat(')')
-			base := &Base{}
-			base.regex = &regex
-			return base
+
+			if re.peek() == '?' {
+				re.eat('?')
+				if re.peek() == '<' {
+					re.eat('<')
+					group_name := ""
+					for re.peek() != '>' {
+						group_name += string(re.next())
+					}
+					re.eat('>')
+
+					regex := re.parse_Regex()
+					re.eat(')')
+					base := &Base{}
+					base.group_name = group_name
+					base.regex = &regex
+					return base
+
+				}
+
+			} else {
+
+				regex := re.parse_Regex()
+				re.eat(')')
+				base := &Base{}
+				base.regex = &regex
+				return base
+			}
 		}
 	case '\\':
 		{
@@ -262,5 +315,5 @@ func (re *Regex_Input) parse_Base() *Base {
 		}
 
 	}
-
+	return nil
 }

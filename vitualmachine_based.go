@@ -11,6 +11,7 @@ type Inst struct {
 	jump1      int
 	jump2      int
 	save_id    int
+	save_group string
 	char_class []char_class_range
 }
 
@@ -36,13 +37,15 @@ type Regex struct {
 	actual_group []int
 }
 
-func (re *Regex) Match(input string) ([]int, bool) {
+func (re *Regex) Match(input string) ([]int, bool, map[string]*group_cap) {
 
 	saved := make([]int, (re.group_number)*2)
 
-	matched := Execute(re.instructions, input, 0, 0, saved)
+	saved_group := map[string]*group_cap{}
 
-	return saved, matched
+	matched := Execute(re.instructions, input, 0, 0, saved, saved_group)
+
+	return saved, matched, saved_group
 
 }
 
@@ -74,7 +77,12 @@ func NewRegex(input_regex string) Regex {
 
 }
 
-func Execute(instructions []Inst, input string, pc, sp int, saved []int) bool {
+type group_cap struct {
+	begin int
+	end   int
+}
+
+func Execute(instructions []Inst, input string, pc, sp int, saved []int, named_saved map[string]*group_cap) bool {
 
 	for {
 		switch instructions[pc].opcode {
@@ -127,7 +135,7 @@ func Execute(instructions []Inst, input string, pc, sp int, saved []int) bool {
 			}
 		case Split:
 			{
-				if Execute(instructions, input, pc+instructions[pc].jump1, sp, saved) {
+				if Execute(instructions, input, pc+instructions[pc].jump1, sp, saved, named_saved) {
 					return true
 				}
 				pc = pc + instructions[pc].jump2
@@ -138,11 +146,26 @@ func Execute(instructions []Inst, input string, pc, sp int, saved []int) bool {
 				old := saved[instructions[pc].save_id]
 				saved[instructions[pc].save_id] = sp
 
-				if Execute(instructions, input, pc+1, sp, saved) {
+				old_n := named_saved[instructions[pc].save_group]
+
+				if instructions[pc].save_group != "" {
+					if _, ok := named_saved[instructions[pc].save_group]; !ok {
+						named_saved[instructions[pc].save_group] = &group_cap{}
+					}
+					if instructions[pc].save_id%2 == 0 {
+						named_saved[instructions[pc].save_group].begin = sp
+					} else {
+						named_saved[instructions[pc].save_group].end = sp
+					}
+				}
+
+				if Execute(instructions, input, pc+1, sp, saved, named_saved) {
 					return true
 				}
 
 				saved[instructions[pc].save_id] = old
+				named_saved[instructions[pc].save_group] = old_n
+
 				return false
 
 			}
