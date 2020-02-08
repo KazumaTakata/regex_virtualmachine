@@ -240,13 +240,6 @@ func compileToBytecode(postfix []byte) ([]Inst, int) {
 		case '(':
 			{
 				group_number++
-				/*if !inst_stack.empty() {*/
-				//prev_inst := inst_stack.pop()
-				//new_inst := append(prev_inst, Inst{opcode: Save, save_id: paren_counter})
-				//inst_stack.push(new_inst)
-				//} else {
-				//inst_stack.push([]Inst{Inst{opcode: Save, save_id: paren_counter}})
-				/*}*/
 				inst_stack.push([]Inst{Inst{opcode: Save, save_id: paren_counter}})
 				paren_stack = append(paren_stack, paren_counter)
 				paren_counter += 2
