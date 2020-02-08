@@ -11,6 +11,28 @@ const (
 	NONE     Repetition = 3
 )
 
+var paren_counter = 0
+var paren_stack = paren_Stack{}
+
+type paren_Stack struct {
+	data []int
+}
+
+func (s *paren_Stack) pop() int {
+	top := s.data[len(s.data)-1]
+	s.data = s.data[:len(s.data)-1]
+	return top
+}
+
+func (s *paren_Stack) top() int {
+	return s.data[len(s.data)-1]
+}
+
+func (s *paren_Stack) push(d int) {
+	s.data = append(s.data, d)
+
+}
+
 type regex struct {
 	terms []*Term
 }
@@ -111,7 +133,19 @@ type Base struct {
 func (ba *Base) gen() []Inst {
 
 	if ba.regex != nil {
-		return ba.regex.gen()
+		//add save instruction
+
+		save_inst := Inst{opcode: Save, save_id: paren_counter}
+		paren_stack.push(paren_counter)
+		paren_counter += 2
+
+		new_inst := append([]Inst{save_inst}, ba.regex.gen()...)
+		paren_id := paren_stack.pop()
+		save_inst = Inst{opcode: Save, save_id: paren_id + 1}
+		new_inst = append(new_inst, save_inst)
+
+		return new_inst
+
 	}
 
 	inst := []Inst{Inst{opcode: Char, char: ba.char}}
