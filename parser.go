@@ -71,11 +71,12 @@ func (re *regex) gen() []Inst {
 			continue
 		}
 		code_length := len(alternated)
-		code_length2 := len(term.gen())
+		new_term := term.gen()
+		code_length2 := len(new_term)
 		inst := Inst{opcode: Split, jump1: 1, jump2: code_length + 2}
 		new_inst := append([]Inst{inst}, alternated...)
 		new_inst = append(new_inst, Inst{opcode: Jmp, jump1: code_length2 + 1})
-		new_inst = append(new_inst, term.gen()...)
+		new_inst = append(new_inst, new_term...)
 		alternated = new_inst
 	}
 
@@ -149,6 +150,7 @@ type Base struct {
 	if_escaped bool
 	regex      *regex
 	group_name string
+	ch_range   []char_class_range
 }
 
 func (ba *Base) gen() []Inst {
@@ -158,7 +160,8 @@ func (ba *Base) gen() []Inst {
 		save_inst := Inst{opcode: Save, save_id: paren_counter, save_group: ba.group_name}
 		paren_stack.push(paren_counter)
 		group_stack.push(ba.group_name)
-		paren_counter += 2
+		fmt.Printf("%+v\n", ba.group_name)
+		paren_counter = paren_counter + 2
 
 		new_inst := append([]Inst{save_inst}, ba.regex.gen()...)
 		paren_id := paren_stack.pop()
@@ -168,6 +171,28 @@ func (ba *Base) gen() []Inst {
 
 		return new_inst
 
+	}
+
+	if len(ba.ch_range) > 0 {
+		insts := []Inst{Inst{opcode: CharClass, char_class: ba.ch_range}}
+		return insts
+	}
+
+	if ba.if_escaped {
+		if ba.char == 'd' {
+			digit_range := char_class_range{begin: '0', end: '9'}
+			insts := []Inst{Inst{opcode: CharClass, char_class: []char_class_range{digit_range}}}
+			return insts
+		} else if ba.char == 'w' {
+			under_range := char_class_range{begin: '_', end: '_'}
+			small_range := char_class_range{begin: 'a', end: 'z'}
+			capital_range := char_class_range{begin: 'A', end: 'Z'}
+			digit_range := char_class_range{begin: '0', end: '9'}
+
+			insts := []Inst{Inst{opcode: CharClass, char_class: []char_class_range{under_range, small_range, capital_range, digit_range}}}
+			return insts
+
+		}
 	}
 
 	inst := []Inst{Inst{opcode: Char, char: ba.char}}
@@ -182,6 +207,10 @@ type Regex_Input struct {
 
 func (re *Regex_Input) peek() byte {
 	return re.input[0]
+}
+
+func (re *Regex_Input) empty() bool {
+	return len(re.input) == 0
 }
 
 func (re *Regex_Input) peek2() byte {
@@ -206,9 +235,13 @@ func (re *Regex_Input) parse_Regex() regex {
 	terms := []*Term{}
 
 	term := re.parse_Term()
-
 	terms = append(terms, term)
 
+	for !re.empty() && re.peek() == '|' {
+		re.eat('|')
+		term = re.parse_Term()
+		terms = append(terms, term)
+	}
 	regex := regex{terms: terms}
 
 	return regex
@@ -260,10 +293,6 @@ func (re *Regex_Input) parse_Base() *Base {
 	switch re.peek() {
 	case '(':
 		{
-			if re.peek2() == '?' {
-				re.eat('(')
-			}
-
 			re.paren_count++
 			re.eat('(')
 
@@ -305,6 +334,32 @@ func (re *Regex_Input) parse_Base() *Base {
 			return base
 
 		}
+	case '[':
+		{
+			re.eat('[')
+
+			base := &Base{}
+			ch_range_list := []char_class_range{}
+
+			for re.peek() != ']' {
+				if re.peek2() == '-' {
+					begin := re.next()
+					re.eat('-')
+					end := re.next()
+					ch_range := char_class_range{begin: begin, end: end}
+					ch_range_list = append(ch_range_list, ch_range)
+				} else {
+					ch := re.next()
+					ch_range := char_class_range{begin: ch, end: ch}
+					ch_range_list = append(ch_range_list, ch_range)
+				}
+
+			}
+			re.eat(']')
+
+			base.ch_range = ch_range_list
+			return base
+		}
 	default:
 		{
 			ch := re.next()
@@ -316,4 +371,27 @@ func (re *Regex_Input) parse_Base() *Base {
 
 	}
 	return nil
+}
+
+func NewRegexWithParser(input_regex string) Regex {
+
+	// init global variable
+	paren_counter = 0
+	paren_stack = paren_Stack{}
+	group_stack = group_Stack{}
+
+	regex_input := Regex_Input{input: input_regex}
+	regex := regex_input.parse_Regex()
+	fmt.Printf("%+v\n", regex)
+
+	insts := regex.gen()
+	insts = appendMatch(insts)
+	for _, inst := range insts {
+		fmt.Printf("%+v\n", inst)
+
+	}
+
+	regex_struct := Regex{instructions: insts, group_number: regex_input.paren_count}
+	return regex_struct
+
 }
