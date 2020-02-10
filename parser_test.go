@@ -2,6 +2,7 @@ package regex
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -85,5 +86,41 @@ func TestLexer(t *testing.T) {
 	fmt.Printf("%+v\n", match)
 
 	fmt.Printf("%+v\n", named)
+
+}
+
+func TestLexerArithmetic(t *testing.T) {
+	lexer_rules := [][]string{}
+	lexer_rules = append(lexer_rules, []string{"NUMBER", "\\d+"})
+	lexer_rules = append(lexer_rules, []string{"ADD", "\\+"})
+	lexer_rules = append(lexer_rules, []string{"SUB", "\\-"})
+	lexer_rules = append(lexer_rules, []string{"MUL", "\\*"})
+	lexer_rules = append(lexer_rules, []string{"DIV", "\\/"})
+
+	regex_parts := []string{}
+
+	for _, rule := range lexer_rules {
+		regex_parts = append(regex_parts, fmt.Sprintf("(?<%s>%s)", rule[0], rule[1]))
+	}
+
+	regex_string := strings.Join(regex_parts, "|")
+	fmt.Printf("%s\n", regex_string)
+}
+
+func TestDot(t *testing.T) {
+
+	regex_input := "(?<DOT>\\d+\\.\\d*)"
+	input := "34.3"
+
+	regex := NewRegexWithParser(regex_input)
+	match, ifmatch, named := regex.Match(input)
+
+	if !ifmatch {
+		t.Errorf("Regex not matched: regex:%s, input:%s", regex_input, input)
+	}
+
+	fmt.Printf("%+v\n", match)
+
+	fmt.Printf("%+v\n", named["DOT"])
 
 }

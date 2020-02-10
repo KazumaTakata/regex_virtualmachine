@@ -160,7 +160,7 @@ func (ba *Base) gen() []Inst {
 		save_inst := Inst{opcode: Save, save_id: paren_counter, save_group: ba.group_name}
 		paren_stack.push(paren_counter)
 		group_stack.push(ba.group_name)
-		fmt.Printf("%+v\n", ba.group_name)
+		//fmt.Printf("%+v\n", ba.group_name)
 		paren_counter = paren_counter + 2
 
 		new_inst := append([]Inst{save_inst}, ba.regex.gen()...)
@@ -382,14 +382,14 @@ func NewRegexWithParser(input_regex string) Regex {
 
 	regex_input := Regex_Input{input: input_regex}
 	regex := regex_input.parse_Regex()
-	fmt.Printf("%+v\n", regex)
+	//fmt.Printf("%+v\n", regex)
 
 	insts := regex.gen()
 	insts = appendMatch(insts)
-	for _, inst := range insts {
-		fmt.Printf("%+v\n", inst)
+	/* for _, inst := range insts {*/
+	//fmt.Printf("%+v\n", inst)
 
-	}
+	//}
 
 	regex_struct := Regex{instructions: insts, group_number: regex_input.paren_count}
 	return regex_struct

@@ -37,11 +37,11 @@ type Regex struct {
 	actual_group []int
 }
 
-func (re *Regex) Match(input string) ([]int, bool, map[string]*group_cap) {
+func (re *Regex) Match(input string) ([]int, bool, map[string]*Group_cap) {
 
 	saved := make([]int, (re.group_number)*2)
 
-	saved_group := map[string]*group_cap{}
+	saved_group := map[string]*Group_cap{}
 
 	matched := Execute(re.instructions, input, 0, 0, saved, saved_group)
 
@@ -77,12 +77,12 @@ func NewRegex(input_regex string) Regex {
 
 }
 
-type group_cap struct {
-	begin int
-	end   int
+type Group_cap struct {
+	Begin int
+	End   int
 }
 
-func Execute(instructions []Inst, input string, pc, sp int, saved []int, named_saved map[string]*group_cap) bool {
+func Execute(instructions []Inst, input string, pc, sp int, saved []int, named_saved map[string]*Group_cap) bool {
 
 	for {
 		switch instructions[pc].opcode {
@@ -150,12 +150,12 @@ func Execute(instructions []Inst, input string, pc, sp int, saved []int, named_s
 
 				if instructions[pc].save_group != "" {
 					if _, ok := named_saved[instructions[pc].save_group]; !ok {
-						named_saved[instructions[pc].save_group] = &group_cap{}
+						named_saved[instructions[pc].save_group] = &Group_cap{}
 					}
 					if instructions[pc].save_id%2 == 0 {
-						named_saved[instructions[pc].save_group].begin = sp
+						named_saved[instructions[pc].save_group].Begin = sp
 					} else {
-						named_saved[instructions[pc].save_group].end = sp
+						named_saved[instructions[pc].save_group].End = sp
 					}
 				}
 
