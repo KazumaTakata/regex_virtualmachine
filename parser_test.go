@@ -124,3 +124,18 @@ func TestDot(t *testing.T) {
 	fmt.Printf("%+v\n", named["DOT"])
 
 }
+
+func TestSpace(t *testing.T) {
+
+	regex_input := "(\\s+)"
+	input := "     abc"
+
+	regex := NewRegexWithParser(regex_input)
+	match, ifmatch, _ := regex.Match(input)
+
+	if !ifmatch {
+		t.Errorf("Regex not matched: regex:%s, input:%s", regex_input, input)
+	}
+
+	fmt.Printf("%+v\n", match)
+}

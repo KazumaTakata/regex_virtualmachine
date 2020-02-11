@@ -192,6 +192,15 @@ func (ba *Base) gen() []Inst {
 			insts := []Inst{Inst{opcode: CharClass, char_class: []char_class_range{under_range, small_range, capital_range, digit_range}}}
 			return insts
 
+		} else if ba.char == 's' {
+			newline_range := char_class_range{begin: '\n', end: '\n'}
+			tab_range := char_class_range{begin: '\t', end: '\t'}
+			white_range := char_class_range{begin: ' ', end: ' '}
+			form_range := char_class_range{begin: '\f', end: '\f'}
+			return_range := char_class_range{begin: '\r', end: '\r'}
+
+			insts := []Inst{Inst{opcode: CharClass, char_class: []char_class_range{newline_range, tab_range, form_range, white_range, return_range}}}
+			return insts
 		}
 	}
 
